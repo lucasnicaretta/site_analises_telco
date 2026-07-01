@@ -2,6 +2,7 @@ import sys
 import os
 import streamlit as st
 
+# Ajuste de caminho para importar o utils_email.py que está na raiz
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils_email import enviar_email_seguro
 
@@ -12,9 +13,9 @@ if 'arquivo_dados' not in st.session_state:
     st.error("⚠️ Volte à Página Inicial e carregue o arquivo.")
     st.stop()
 
-st.title("Central de Relatório Estratégico")
+st.title("📄 Central de Relatório Estratégico")
 
-#TEXTO PADRÃO DO RELATÓRIO
+# --- TEXTO PADRÃO DO RELATÓRIO ---
 texto_padrao = """RELATÓRIO DE INSIGHTS ESTRATÉGICOS - BASE TELCO
 
 A análise da base de clientes da empresa de telecomunicações evidencia que o índice de cancelamento é um dos principais desafios do negócio. Dos 7.043 clientes cadastrados, aproximadamente 26,5% encerraram seu relacionamento com a empresa, representando uma perda significativa tanto de receita quanto de oportunidades futuras de fidelização. Esse percentual indica que, embora a empresa possua uma carteira consolidada de clientes ativos, existe uma parcela expressiva que não permanece utilizando os serviços. Durante a exploração dos dados, observou-se que a base apresenta boa qualidade, sendo que a maior parte dos valores ausentes ocorre em colunas relacionadas ao cancelamento, como "Churn Reason" e "Churn Category". Esses campos permanecem vazios para clientes ativos, o que demonstra que a ausência dessas informações é esperada e não caracteriza um problema na coleta dos dados, porém pode analisar a causa raiz.
@@ -33,9 +34,9 @@ Com base nos resultados obtidos, recomenda-se que a empresa desenvolva programas
 """
 
 # --- 1. DOWNLOAD ---
-st.subheader("Baixar Relatório")
+st.subheader("1. Download")
 st.download_button(
-    label="Baixar Relatório (Arquivo .txt)",
+    label="📥 Baixar Relatório (Arquivo .txt)",
     data=texto_padrao,
     file_name="Relatorio_Insights_Telco.txt",
     mime="text/plain"
@@ -43,41 +44,43 @@ st.download_button(
 
 st.markdown("---")
 
-#2. CONFIGURAÇÃO DE E-MAIL 
+# --- 2. CONFIGURAÇÃO DE E-MAIL ---
 st.subheader("Configuração do E-mail")
 email_destinatario = st.text_input("Destinatário:")
 assunto_email = st.text_input("Assunto:")
 corpo_email_usuario = st.text_area("Corpo do e-mail:", value="", height=200)
 
-#3. O QUE DESEJA ENVIAR? ---
+# --- 3. O QUE DESEJA ENVIAR? ---
 st.subheader("O que deseja enviar?")
-enviar_relatorio = st.checkbox("Relatório Junto")
+enviar_relatorio = st.checkbox("Relatório em Anexo (.txt)")
 enviar_grafico = st.checkbox("Salvar Gráfico")
 
 # Botão de disparo com rótulo "Enviar E-mail"
-if st.button("Enviar o E-mail", type="primary"):
+if st.button("Enviar E-mail", type="primary"):
     if not email_destinatario:
         st.error("Por favor, digite o e-mail do destinatário.")
     else:
         with st.spinner("Enviando..."):
             try:
-                mensagem_usuario = corpo_email_usuario if corpo_email_usuario else ""
+                # O corpo do e-mail será apenas o que o usuário digitou
+                corpo_final = corpo_email_usuario if corpo_email_usuario else "Segue em anexo o relatório/gráfico solicitado."
                 
-                if enviar_relatorio:
-                    if mensagem_usuario:
-                        conteudo_final = f"{mensagem_usuario}\n\n---\n\n{texto_padrao}"
-                    else:
-                        conteudo_final = texto_padrao
-                else:
-                    conteudo_final = mensagem_usuario
+                # Prepara o anexo de texto se o checkbox estiver marcado
+                txt_para_anexar = texto_padrao if enviar_relatorio else None
+                
+                # Busca o gráfico se o checkbox estiver marcado
+                fig = st.session_state.get('fig_churn') if enviar_grafico else None
 
-                if not conteudo_final.strip() and not enviar_grafico:
-                    st.warning("O e-mail está vazio! Digite algo ou marque uma das opções de envio.")
-                else:
-                    fig = st.session_state.get('fig_churn') if enviar_grafico else None
-                    
-                    enviar_email_seguro(email_destinatario, assunto_email, conteudo_final, fig)
-                    
-                    st.success(f"E-mail enviado com sucesso para {email_destinatario}!")
+                # Passamos as variáveis extras para a função
+                enviar_email_seguro(
+                    destinatario=email_destinatario, 
+                    assunto=assunto_email, 
+                    corpo=corpo_final, 
+                    fig=fig, 
+                    anexo_texto=txt_para_anexar, 
+                    nome_anexo_texto="Relatorio_Insights.txt"
+                )
+                
+                st.success(f"E-mail enviado com sucesso para {email_destinatario}!")
             except Exception as e:
                 st.error(f"Erro ao enviar: {e}")
