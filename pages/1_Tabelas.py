@@ -2,30 +2,20 @@ import sys
 import os
 import streamlit as st
 
-# Garante que o Python enxergue o diretório raiz
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 st.set_page_config(page_title="Visualização de Dados - InsightStream", layout="wide")
 
-# ==============================================================================
-# 1. SIDEBAR E IDENTIFICAÇÃO
-# ==============================================================================
-st.sidebar.markdown("### Identificação do Usuário")
-if 'username' not in st.session_state:
-    st.session_state['username'] = ""
-st.session_state['username'] = st.sidebar.text_input("Nome:", value=st.session_state['username'])
-
-if st.session_state['username']:
-    st.markdown(f"#### Olá, **{st.session_state['username']}**! Bem-vindo ao módulo de auditoria.")
-else:
-    st.markdown("#### Bem-vindo ao módulo de auditoria.")
-
+# 2. TÍTULO E SAUDAÇÃO DINÂMICA
 st.title("Visualização de Tabelas")
+if st.session_state['username']:
+    st.markdown(f"#### Olá, **{st.session_state['username']}**! Aqui você tem a visualização e filtros da sua tabela de uma visão mais dinâmica.")
+else:
+    st.markdown("#### Aqui você tem a visualização e filtros da sua tabela com uma visão mais dinâmica.")
+    
 st.markdown("---")
 
-# ==============================================================================
-# 2. LÓGICA DE DADOS
-# ==============================================================================
+# 3. LÓGICA DE DADOS
 if 'arquivo_dados' not in st.session_state or st.session_state['arquivo_dados'] is None:
     st.warning("**Nenhum dado encontrado!** Por favor, volte na **Página Inicial** e faça o upload do arquivo.")
     st.stop()
@@ -44,9 +34,7 @@ def acao_marcar_todas():
 def acao_limpar_todas():
     st.session_state['colunas_selecionadas'] = []
 
-# ==============================================================================
-# 3. INTERFACE DE FILTROS
-# ==============================================================================
+# 4. INTERFACE DE FILTROS
 with st.expander("Filtrar Colunas"):
     st.markdown("##### Selecione quais colunas exibir:")
     
@@ -55,7 +43,6 @@ with st.expander("Filtrar Colunas"):
     
     for idx, col_nome in enumerate(todas_colunas):
         with cols_layout[idx % 4]:
-            # Se a coluna estiver na lista, o checkbox nasce marcado
             if st.checkbox(col_nome, value=col_nome in st.session_state['colunas_selecionadas'], key=f"check_{col_nome}"):
                 novas_selecoes.append(col_nome)
     
@@ -75,9 +62,7 @@ with st.expander("Filtrar Colunas"):
         if st.button("Apagar Seleção", on_click=acao_limpar_todas, use_container_width=True):
             st.rerun()
 
-# ==============================================================================
-# 4. BUSCA E EXIBIÇÃO
-# ==============================================================================
+# 5. BUSCA E EXIBIÇÃO
 termo_busca = st.text_input("Buscar na Tabela:", placeholder="Digite para filtrar linhas...")
 
 st.markdown("---")

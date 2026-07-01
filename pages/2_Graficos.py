@@ -1,17 +1,14 @@
 import sys
 import os
 
-# Isso diz ao Python: "Procure também na pasta pai (a raiz do projeto)"
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Agora o import deve funcionar sem erros:
+#Imports
 from utils_email import enviar_email_seguro
 import streamlit as st
 import matplotlib.pyplot as plt
 
-# ==============================================================================
 # 1. CONFIGURAÇÃO E SEGURANÇA
-# ==============================================================================
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 st.set_page_config(page_title="InsightStream - Gráficos", layout="wide")
@@ -23,20 +20,16 @@ if 'arquivo_dados' not in st.session_state or st.session_state['arquivo_dados'] 
 
 df = st.session_state['arquivo_dados']
 
-# ==============================================================================
-# 2. IDENTIFICAÇÃO DO USUÁRIO
-# ==============================================================================
-usuario = st.session_state.get('username', '')
-if usuario:
-    st.title(f"📊 {usuario}, aqui criamos os gráficos")
+# 2. TÍTULO E SAUDAÇÃO
+st.title("Criação de Gráficos")
+if st.session_state['username']:
+    st.markdown(f"#### Olá, **{st.session_state['username']}**! Aqui você cria seus gráficos para enxergar seus dados diferentes.")
 else:
-    st.title("📊 Aqui criamos os gráficos")
+    st.markdown("#### Aqui você cria seus gráficos para enxergar seus dados diferentes.")
 
 st.markdown("---")
 
-# ==============================================================================
 # 3. SELEÇÃO DE DADOS E TIPO DE GRÁFICO
-# ==============================================================================
 col_a, col_b = st.columns(2)
 
 with col_a:
@@ -70,9 +63,7 @@ coluna_2 = None
 if tipo == "Dispersão":
     coluna_2 = st.selectbox("Selecione a segunda coluna (Eixo Y):", options=df.columns, index=None)
 
-# ==============================================================================
 # 4. GERAÇÃO DO GRÁFICO
-# ==============================================================================
 # Verifica se as seleções obrigatórias foram feitas
 pode_gerar = (coluna_1 and tipo) and (tipo != "Dispersão" or coluna_2)
 
