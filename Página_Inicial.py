@@ -1,64 +1,53 @@
 import streamlit as st
 import pandas as pd
 
-# ==============================================================================
 # 1. CONFIGURAÇÃO AMBIENTAL DA HOME
-# ==============================================================================
 st.set_page_config(
     page_title="InsightStream - Home",
-    page_icon="🏠",
     layout="wide"
 )
 
-# ---------------------------------------------------------------------------
-# REQUISITO DO PDF: SIDEBAR GLOBAL PARA CAPTURA DO NOME (Salvo na Sessão)
-# ---------------------------------------------------------------------------
-st.sidebar.markdown("### 👤 Identificação do Usuário")
+#INICIALIZAÇÃO DE ESTADO 
 if 'username' not in st.session_state:
     st.session_state['username'] = ""
+if 'arquivo_dados' not in st.session_state:
+    st.session_state['arquivo_dados'] = None
 
-# Input text que persiste o nome do usuário entre a troca de páginas
-nome_input = st.sidebar.text_input("Digite seu nome completo:", value=st.session_state['username'])
-st.session_state['username'] = nome_input
+# SIDEBAR
+st.sidebar.markdown("### Identificação do Usuário")
+st.session_state['username'] = st.sidebar.text_input("Digite seu nome completo:", value=st.session_state['username'])
 
-# ---------------------------------------------------------------------------
-# CONTEÚDO PRINCIPAL: IDENTIDADE DA "EMPRESA" (BÔNUS DO PDF)
-# ---------------------------------------------------------------------------
+# CONTEÚDO PRINCIPAL
 st.title("Bem-vindo à InsightStream Analytics")
-st.markdown("#### Soluções Avançadas em Business Intelligence & Retenção de Clientes")
+
+#SAUDAÇÃO PERSONALIZADA
+if st.session_state['username']:
+    st.markdown(f"#### Olá, **{st.session_state['username']}**! Bem-vindo(a) à sua central de dados.")
+else:
+    st.markdown("#### Soluções Avançadas em Business Intelligence & Retenção de Clientes")
+
 st.markdown("---")
 
-# Apresentação corporativa atendendo ao bônus sugerido no projeto
 st.markdown("""
 A **InsightStream** é uma consultoria especializada em engenharia de dados e diagnóstico de rotatividade. 
-Esta plataforma foi desenvolvida sob medida para explorar os dados operacionais da sua empresa, 
-identificar com precisão os gargalos que geram o cancelamento de serviços (**Churn**) e fornecer 
-diretrizes estratégicas para o aumento do ciclo de vida dos seus clientes.
+Esta plataforma foi desenvolvida sob medida para explorar os dados operacionais da sua empresa.
 """)
 
 st.markdown("### Ingestão da Base de Dados")
-st.markdown("Por favor, faça o upload do arquivo contendo os dados demográficos e de consumo dos clientes para liberar os módulos de auditoria tabular e análise gráfica.")
+st.markdown("Por favor, faça o upload do arquivo para ativar os módulos.")
 
-# Componente de Upload do Dataset
-arquivo_carregado = st.file_uploader("Carregue seu arquivo no formato .csv", type=["csv"])
+#LÓGICA DE UPLOAD PERSISTENTE
+def carregar_arquivo():
+    if st.session_state['uploader_key'] is not None:
+        st.session_state['arquivo_dados'] = pd.read_csv(st.session_state['uploader_key'])
 
-if arquivo_carregado is not None:
-    try:
-        # Armazena o DataFrame na sessão global do Streamlit
-        df = pd.read_csv(arquivo_carregado)
-        st.session_state['arquivo_dados'] = df
-        
-        linhas, colunas = df.shape
-        st.success(f"Base de dados integrada e processada com sucesso!")
-        
-        # Informativo de metadados para guiar o analista
-        st.info(f"**Mapeamento Concluído:** Foram identificados **{linhas} registros (clientes)** e **{colunas} variáveis** operacionais prontas para análise.")
-        
-        # Interação amigável com o nome do usuário
-        if st.session_state['username']:
-            st.markdown(f"**Pronto, {st.session_state['username']}!** Use a barra lateral para navegar entre a visualização de tabelas e a geração de gráficos.")
-            
-    except Exception as e:
-        st.error(f" Erro crítico ao processar o arquivo CSV: {e}")
+st.file_uploader("Carregue seu arquivo no formato .csv", type=["csv"], key='uploader_key', on_change=carregar_arquivo)
+
+#STATUS DO ARQUIVO
+if st.session_state['arquivo_dados'] is not None:
+    df = st.session_state['arquivo_dados']
+    linhas, colunas = df.shape
+    st.success(f"Base de dados integrada e processada com sucesso!")
+    st.info(f"**Mapeamento Concluído:** {linhas} registros e {colunas} variáveis.")
 else:
-    st.warning(" Aguardando a importação da base de dados (.csv) para ativar as demais páginas do sistema.")
+    st.warning("Aguardando a importação da base de dados (.csv) para ativar as demais páginas.")
