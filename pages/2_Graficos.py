@@ -1,125 +1,128 @@
+import sys
+import os
+
+# Isso diz ao Python: "Procure também na pasta pai (a raiz do projeto)"
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Agora o import deve funcionar sem erros:
+from utils_email import enviar_email_seguro
 import streamlit as st
-import plotly.express as px
-import pandas as pd
+import matplotlib.pyplot as plt
 
 # ==============================================================================
-# 1. CONFIGURAÇÃO DA PÁGINA E SEGURANÇA
+# 1. CONFIGURAÇÃO E SEGURANÇA
 # ==============================================================================
-st.set_page_config(page_title="Análise Gráfica", layout="wide")
-st.title("📊 Análise Gráfica Dinâmica")
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+st.set_page_config(page_title="InsightStream - Gráficos", layout="wide")
+
+# Verificação de segurança
 if 'arquivo_dados' not in st.session_state or st.session_state['arquivo_dados'] is None:
-    st.error("⚠️ Nenhum arquivo carregado.")
-    st.info("Volte à Página Inicial para importar seus dados.")
+    st.error("⚠️ Nenhum arquivo carregado. Volte à Página Inicial.")
     st.stop()
 
-df = st.session_state['arquivo_dados'].copy()
+df = st.session_state['arquivo_dados']
 
 # ==============================================================================
-# 2. CONTROLES DA INTERFACE
+# 2. IDENTIFICAÇÃO DO USUÁRIO
 # ==============================================================================
-col_a, col_b = st.columns(2)
-tipo_grafico = col_a.selectbox("Tipo de Gráfico:", 
-                               ["Barras", "Linhas", "Pizza", "Área", "Dispersão", "Histograma", "Boxplot"])
-eixo_x = col_b.selectbox("Eixo X (Categorias):", [None] + df.columns.tolist())
-
-col_cat = st.selectbox("Dividir por Categoria (Opcional - Cria legenda e divide os dados):", 
-                       [None] + df.columns.tolist())
-
-ativar_y = st.toggle("Habilitar métrica de Eixo Y (Valores)")
-eixo_y, agg = None, "Contagem"
-
-if ativar_y:
-    c1, c2 = st.columns(2)
-    eixo_y = c1.selectbox("Coluna Métrica (Y):", df.columns.tolist())
-    agg = c2.selectbox("Agregação:", ["Soma", "Média", "Contagem"])
+usuario = st.session_state.get('username', '')
+if usuario:
+    st.title(f"📊 {usuario}, aqui criamos os gráficos")
+else:
+    st.title("📊 Aqui criamos os gráficos")
 
 st.markdown("---")
 
 # ==============================================================================
-# 3. MOTOR DE RENDERIZAÇÃO ADAPTATIVO
+# 3. SELEÇÃO DE DADOS E TIPO DE GRÁFICO
 # ==============================================================================
-if eixo_x:
+col_a, col_b = st.columns(2)
+
+with col_a:
+    coluna_1 = st.selectbox(
+        "Selecione a primeira coluna:", 
+        options=df.columns, 
+        index=None, 
+        placeholder="Selecione..."
+    )
+
+with col_b:
+    lista_graficos = [
+        "Pizza", 
+        "Barras Verticais", 
+        "Barras Horizontais", 
+        "Histograma", 
+        "Linha", 
+        "Área", 
+        "Boxplot", 
+        "Dispersão"
+    ]
+    tipo = st.selectbox(
+        "Selecione o modelo de gráfico:", 
+        options=lista_graficos, 
+        index=None, 
+        placeholder="Selecione o tipo..."
+    )
+
+# Lógica condicional para gráficos que exigem 2 colunas
+coluna_2 = None
+if tipo == "Dispersão":
+    coluna_2 = st.selectbox("Selecione a segunda coluna (Eixo Y):", options=df.columns, index=None)
+
+# ==============================================================================
+# 4. GERAÇÃO DO GRÁFICO
+# ==============================================================================
+# Verifica se as seleções obrigatórias foram feitas
+pode_gerar = (coluna_1 and tipo) and (tipo != "Dispersão" or coluna_2)
+
+if pode_gerar:
+    fig, ax = plt.subplots(figsize=(5, 3)) 
+
     try:
-        params = {"color": col_cat} if col_cat else {}
+        # Lógica para cada tipo de gráfico
+        if tipo == "Pizza":
+            contagem = df[coluna_1].value_counts()
+            ax.pie(contagem, labels=contagem.index, autopct='%1.1f%%', textprops={'fontsize': 8})
+            
+        elif tipo == "Barras Verticais":
+            df[coluna_1].value_counts().plot(kind='bar', ax=ax, color='skyblue')
+            
+        elif tipo == "Barras Horizontais":
+            df[coluna_1].value_counts().plot(kind='barh', ax=ax, color='lightgreen')
+            
+        elif tipo == "Histograma":
+            df[coluna_1].hist(ax=ax, bins=20, color='salmon', edgecolor='black')
+            
+        elif tipo == "Linha":
+            df[coluna_1].value_counts().sort_index().plot(kind='line', ax=ax, marker='o', color='purple')
+            
+        elif tipo == "Área":
+            df[coluna_1].value_counts().sort_index().plot(kind='area', ax=ax, alpha=0.5, color='orange')
+            
+        elif tipo == "Boxplot":
+            df.boxplot(column=[coluna_1], ax=ax, grid=False)
+            
+        elif tipo == "Dispersão":
+            ax.scatter(df[coluna_1], df[coluna_2], color='red', alpha=0.5)
+            ax.set_xlabel(coluna_1)
+            ax.set_ylabel(coluna_2)
+
+        ax.set_title(f'{tipo}: {coluna_1}', fontsize=10)
+        fig.tight_layout()
+
+        # Salva para o e-mail
+        st.session_state['fig_churn'] = fig 
         
-        # Pré-processamento dos dados (Agrupamento)
-        df_plot = df.copy()
+        # Exibição centralizada
+        m_esq, centro, m_dir = st.columns([1, 2, 1]) 
+        with centro:
+            st.pyplot(fig)
         
-        if ativar_y and eixo_y:
-            mapa_agg = {"Soma": "sum", "Média": "mean", "Contagem": "count"}
-            grupos = [eixo_x, col_cat] if col_cat else [eixo_x]
-            df_plot = df.groupby(grupos)[eixo_y].agg(mapa_agg[agg]).reset_index()
-            y_final = eixo_y
-        else:
-            grupos = [eixo_x, col_cat] if col_cat else [eixo_x]
-            df_plot = df.groupby(grupos).size().reset_index(name='Contagem')
-            y_final = 'Contagem'
-
-        # --- REGRAS DE CLAREZA VISUAL PARA CADA GRÁFICO ---
-        if tipo_grafico == "Barras":
-            # Barras: text_auto mostra os números e barmode='group' as coloca lado a lado
-            fig = px.bar(df_plot, x=eixo_x, y=y_final, text_auto=True, barmode='group', **params)
-            fig.update_traces(textposition='outside')
-
-        elif tipo_grafico == "Linhas":
-            # Linhas: markers=True cria a bolinha, text mostra o número em cima de cada ponto
-            fig = px.line(df_plot.sort_values(eixo_x), x=eixo_x, y=y_final, markers=True, text=y_final, **params)
-            fig.update_traces(textposition='top center')
-
-        elif tipo_grafico == "Pizza":
-            # Pizza: exibe tanto a porcentagem quanto o número bruto dentro da fatia
-            fig = px.pie(df_plot, names=eixo_x, values=y_final, **params)
-            fig.update_traces(textposition='inside', textinfo='percent+value')
-
-        elif tipo_grafico == "Área":
-            # Área: Adiciona os números no topo da área demarcada
-            fig = px.area(df_plot.sort_values(eixo_x), x=eixo_x, y=y_final, text=y_final, **params)
-            fig.update_traces(textposition='top center')
-
-        elif tipo_grafico == "Dispersão":
-            # Dispersão: Adiciona valores perto das bolinhas (ideal para dados já agrupados)
-            fig = px.scatter(df_plot, x=eixo_x, y=y_final, text=y_final, **params)
-            fig.update_traces(textposition='top center', marker=dict(size=10))
-
-        elif tipo_grafico == "Histograma":
-            # Histograma: Precisa do dado original (df) e exibe text_auto nas contagens
-            cor_hist = col_cat if col_cat else None
-            fig = px.histogram(df, x=eixo_x, color=cor_hist, barmode='group', text_auto=True)
-
-        elif tipo_grafico == "Boxplot":
-            # Boxplot: Precisa do dado original (df) para calcular a mediana e os quartis
-            cor_box = col_cat if col_cat else None
-            eixo_y_box = eixo_y if ativar_y else None
-            fig = px.box(df, x=eixo_x, y=eixo_y_box, color=cor_box)
-
-        # Ajuste fino de layout para que os números não fiquem cortados
-        fig.update_layout(margin=dict(t=40, b=10, l=10, r=10))
-        st.plotly_chart(fig, use_container_width=True)
-
-        # ==============================================================================
-        # 4. BOTÕES DE EXPORTAÇÃO
-        # ==============================================================================
-        st.markdown("---")
-        st.subheader("📥 Exportação")
+        st.success(f"Gráfico de {tipo} gerado com sucesso!")
         
-        img_bytes = fig.to_image(format="png", width=1000, height=600)
-        st.download_button(
-            label="Baixar Gráfico (PNG)",
-            data=img_bytes,
-            file_name=f"grafico_{tipo_grafico.lower()}.png",
-            mime="image/png"
-        )
-        
-        with st.expander("📧 Enviar este gráfico por e-mail"):
-            email_dest = st.text_input("E-mail de destino:", value="", key="email_input")
-            if st.button("Solicitar Envio"):
-                if email_dest and "@" in email_dest:
-                    st.success(f"O gráfico estruturado será enviado para {email_dest}!")
-                else:
-                    st.error("Por favor, informe um e-mail válido.")
-
     except Exception as e:
-        st.error(f"Incompatibilidade detectada: {e}. Tente ajustar a métrica no Eixo Y.")
+        st.error(f"Não foi possível gerar este gráfico: {e}")
+        st.info("Dica: Verifique se os dados da coluna selecionada são compatíveis com o tipo de gráfico (ex: colunas numéricas para Histograma/Boxplot).")
 else:
-    st.info("💡 **Aguardando dados:** Selecione uma coluna para o Eixo X.")
+    st.info("Por favor, selecione as opções acima para visualizar o gráfico.")
