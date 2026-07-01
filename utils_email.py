@@ -22,10 +22,12 @@ def enviar_email_seguro(destinatario, assunto, corpo, fig=None, anexo_texto=None
 
     # Adiciona o gráfico
     if fig:
-        # Usa pio.to_image para converter o gráfico em bytes
-        img_bytes = pio.to_image(fig, format="png")
-        parte_img = MIMEImage(img_bytes, name="grafico.png")
-        msg.attach(parte_img)
+        try:
+            img_bytes = pio.to_image(fig, format="png")
+            parte_img = MIMEImage(img_bytes, name="grafico.png")
+            msg.attach(parte_img)
+        except Exception as e:
+            st.warning(f"Não foi possível anexar o gráfico (Erro: {e}). Continuando envio...")
 
     if anexo_texto:
         parte_txt = MIMEText(anexo_texto, 'plain', 'utf-8')
