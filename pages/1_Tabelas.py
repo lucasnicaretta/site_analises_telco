@@ -6,10 +6,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 st.set_page_config(page_title="Visualização de Dados - InsightStream", layout="wide")
 
-# 2. TÍTULO E SAUDAÇÃO DINÂMICA
 st.title("Visualização de Tabelas")
-if st.session_state['username']:
-    st.markdown(f"#### Olá, **{st.session_state['username']}**! Aqui você tem a visualização e filtros da sua tabela de uma visão mais dinâmica.")
+if 'username' in st.session_state and st.session_state['username']:
+    st.markdown(f"#### Olá, **{st.session_state['username']}**! Aqui você tem a visualização e filtros da sua tabela.")
 else:
     st.markdown("#### Aqui você tem a visualização e filtros da sua tabela com uma visão mais dinâmica.")
     
@@ -23,11 +22,15 @@ if 'arquivo_dados' not in st.session_state or st.session_state['arquivo_dados'] 
 df_original = st.session_state['arquivo_dados']
 todas_colunas = df_original.columns.tolist()
 
-# Inicializa estado das colunas selecionadas
+# Variável de CONTROLE (UI dos checkboxes)
 if 'colunas_selecionadas' not in st.session_state:
     st.session_state['colunas_selecionadas'] = todas_colunas
 
-# Funções de Callback para botões
+# Variável de EXIBIÇÃO (O que a tabela mostra)
+if 'colunas_exibidas' not in st.session_state:
+    st.session_state['colunas_exibidas'] = todas_colunas
+
+# Funções de Callback
 def acao_marcar_todas():
     st.session_state['colunas_selecionadas'] = todas_colunas
 
@@ -35,31 +38,38 @@ def acao_limpar_todas():
     st.session_state['colunas_selecionadas'] = []
 
 # 4. INTERFACE DE FILTROS
-with st.expander("Filtrar Colunas"):
+with st.expander("Filtrar Colunas", expanded=True):
     st.markdown("##### Selecione quais colunas exibir:")
     
     cols_layout = st.columns(4)
     novas_selecoes = []
     
+    # Checkboxes ligados a 'colunas_selecionadas' (UI)
     for idx, col_nome in enumerate(todas_colunas):
         with cols_layout[idx % 4]:
-            if st.checkbox(col_nome, value=col_nome in st.session_state['colunas_selecionadas'], key=f"check_{col_nome}"):
+            if st.checkbox(col_nome, value=col_nome in st.session_state['colunas_selecionadas']):
                 novas_selecoes.append(col_nome)
     
     # Botões de Ação
     col_btn1, col_btn2, col_btn3, _ = st.columns([1.5, 1.5, 1.5, 5.5])
     
     with col_btn1:
+        # BOTÃO APLICAR: Copia o que foi selecionado para as colunas exibidas
         if st.button("Aplicar Filtro", type="primary", use_container_width=True):
             st.session_state['colunas_selecionadas'] = novas_selecoes
+            st.session_state['colunas_exibidas'] = novas_selecoes
             st.rerun()
             
     with col_btn2:
-        if st.button("Marcar Todas", on_click=acao_marcar_todas, use_container_width=True):
+        # Apenas atualiza a UI (checkboxes), não a tabela
+        if st.button("Marcar Todas", use_container_width=True):
+            acao_marcar_todas()
             st.rerun()
 
     with col_btn3:
-        if st.button("Apagar Seleção", on_click=acao_limpar_todas, use_container_width=True):
+        # Apenas atualiza a UI (checkboxes), não a tabela
+        if st.button("Apagar Seleção", use_container_width=True):
+            acao_limpar_todas()
             st.rerun()
 
 # 5. BUSCA E EXIBIÇÃO
@@ -67,16 +77,19 @@ termo_busca = st.text_input("Buscar na Tabela:", placeholder="Digite para filtra
 
 st.markdown("---")
 
-# Aplica as colunas selecionadas
-df_exibicao = df_original[st.session_state['colunas_selecionadas']] if st.session_state['colunas_selecionadas'] else df_original
+# Aplica as colunas EXIBIDAS (O que foi confirmado pelo botão Aplicar)
+if st.session_state['colunas_exibidas']:
+    df_exibicao = df_original[st.session_state['colunas_exibidas']]
+else:
+    df_exibicao = df_original.iloc[:, 0:0] 
 
-# Aplica a busca (se houver)
+# Aplica a busca (na tabela já filtrada pelas colunas escolhidas)
 if termo_busca:
     mascara = df_exibicao.astype(str).apply(lambda row: row.str.contains(termo_busca, case=False, na=False)).any(axis=1)
     df_exibicao = df_exibicao[mascara]
 
 st.subheader("Dados Analíticos")
-if not st.session_state['colunas_selecionadas']:
+if not st.session_state['colunas_exibidas']:
     st.info("Nenhuma coluna selecionada. Marque as opções acima e clique em 'Aplicar Filtro'.")
 else:
     st.dataframe(df_exibicao, use_container_width=True)
