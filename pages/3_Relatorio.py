@@ -15,25 +15,19 @@ if 'arquivo_dados' not in st.session_state:
 
 st.title("📄 Central de Relatório Estratégico")
 
-# --- TEXTO PADRÃO DO RELATÓRIO ---
+#TEXTO PADRÃO DO RELATÓRIO
 texto_padrao = """RELATÓRIO DE INSIGHTS ESTRATÉGICOS - BASE TELCO
 
-A análise da base de clientes da empresa de telecomunicações evidencia que o índice de cancelamento é um dos principais desafios do negócio. Dos 7.043 clientes cadastrados, aproximadamente 26,5% encerraram seu relacionamento com a empresa, representando uma perda significativa tanto de receita quanto de oportunidades futuras de fidelização. Esse percentual indica que, embora a empresa possua uma carteira consolidada de clientes ativos, existe uma parcela expressiva que não permanece utilizando os serviços. Durante a exploração dos dados, observou-se que a base apresenta boa qualidade, sendo que a maior parte dos valores ausentes ocorre em colunas relacionadas ao cancelamento, como "Churn Reason" e "Churn Category". Esses campos permanecem vazios para clientes ativos, o que demonstra que a ausência dessas informações é esperada e não caracteriza um problema na coleta dos dados, porém pode analisar a causa raiz.
+A análise da base de clientes da empresa de telecomunicações evidencia que o índice de cancelamento é um dos principais desafios do negócio. Dos 7.043 clientes cadastrados, aproximadamente 26,5% encerraram seu relacionamento com a empresa. 
 
-- Clientes com menor tempo de permanência tendem a apresentar maior risco de churn, indicando que os primeiros meses de relacionamento representam um período crítico para a retenção. Esse comportamento sugere a necessidade de estratégias voltadas ao acompanhamento de novos clientes, buscando garantir uma experiência positiva desde a contratação dos serviços.
+- Clientes com menor tempo de permanência tendem a apresentar maior risco de churn.
+- Contratos mensais apresentam maior tendência ao cancelamento.
+- Mensalidades elevadas sem percepção de valor aumentam a evasão.
 
-Outro fator relevante está relacionado ao tipo de contrato. Clientes que utilizam contratos mensais apresentam maior tendência ao cancelamento quando comparados àqueles que possuem contratos anuais ou de longo prazo. Esse comportamento demonstra que contratos mais duradouros contribuem para aumentar a fidelização e reduzir a rotatividade da carteira.
-
-A análise também evidencia que clientes que possuem mensalidades mais elevadas podem apresentar maior propensão ao cancelamento, principalmente quando essa cobrança não é acompanhada por uma percepção satisfatória da qualidade dos serviços prestados.
-
-Níveis menores de satisfação normalmente estão associados a maiores índices de evasão, tornando esse indicador um importante sinal de alerta para a empresa.
-
-Outro ponto importante é o valor do Customer Lifetime Value (CLTV), que representa o potencial financeiro de cada cliente ao longo do relacionamento com a empresa. Considerando que mais de 1.800 clientes cancelaram seus serviços, a perda financeira acumulada torna-se significativa, especialmente quando parte desses clientes possui alto valor de vida útil. Dessa forma, torna-se essencial identificar antecipadamente clientes estratégicos com maior risco de cancelamento para direcionar ações específicas de retenção.
-
-Com base nos resultados obtidos, recomenda-se que a empresa desenvolva programas de retenção direcionados aos clientes com maior risco de churn, principalmente aqueles com pouco tempo de permanência, baixa satisfação e contratos mensais. Também é recomendável incentivar a migração para contratos de maior duração, revisar políticas de preços para clientes mais sensíveis ao valor das mensalidades, investir continuamente na qualidade do atendimento e utilizar modelos preditivos para identificar clientes com elevada probabilidade de cancelamento antes que a evasão ocorra.
+Recomenda-se: programas de retenção direcionados, incentivo à migração para contratos de maior duração e revisão de políticas de preços.
 """
 
-# --- 1. DOWNLOAD ---
+#1. DOWNLOAD 
 st.subheader("1. Download")
 st.download_button(
     label="📥 Baixar Relatório (Arquivo .txt)",
@@ -44,34 +38,34 @@ st.download_button(
 
 st.markdown("---")
 
-# --- 2. CONFIGURAÇÃO DE E-MAIL ---
+# 2. CONFIGURAÇÃO DE E-MAIL 
 st.subheader("Configuração do E-mail")
 email_destinatario = st.text_input("Destinatário:")
 assunto_email = st.text_input("Assunto:")
-corpo_email_usuario = st.text_area("Corpo do e-mail:", value="", height=200)
+corpo_email_usuario = st.text_area("Corpo do e-mail:", value="", height=150)
 
-# --- 3. O QUE DESEJA ENVIAR? ---
+# 3. O QUE DESEJA ENVIAR? ---
 st.subheader("O que deseja enviar?")
-enviar_relatorio = st.checkbox("Relatório em Anexo (.txt)")
-enviar_grafico = st.checkbox("Salvar Gráfico")
+col1, col2 = st.columns(2)
+with col1:
+    enviar_relatorio = st.checkbox("Relatório em Anexo (.txt)")
+with col2:
+    enviar_grafico = st.checkbox("Gráfico em Anexo (.png)")
 
-# Botão de disparo com rótulo "Enviar E-mail"
+# Botão de disparo
 if st.button("Enviar E-mail", type="primary"):
     if not email_destinatario:
         st.error("Por favor, digite o e-mail do destinatário.")
     else:
-        with st.spinner("Enviando..."):
+        with st.spinner("Enviando e-mail..."):
             try:
-                # O corpo do e-mail será apenas o que o usuário digitou
-                corpo_final = corpo_email_usuario if corpo_email_usuario else "Segue em anexo o relatório/gráfico solicitado."
+                # Corpo padrão caso o usuário não escreva nada
+                corpo_final = corpo_email_usuario if corpo_email_usuario else "Segue em anexo o relatório e/ou gráfico solicitado."
                 
-                # Prepara o anexo de texto se o checkbox estiver marcado
                 txt_para_anexar = texto_padrao if enviar_relatorio else None
-                
-                # Busca o gráfico se o checkbox estiver marcado
                 fig = st.session_state.get('fig_churn') if enviar_grafico else None
 
-                # Passamos as variáveis extras para a função
+                # Chamada da função
                 enviar_email_seguro(
                     destinatario=email_destinatario, 
                     assunto=assunto_email, 
@@ -82,5 +76,6 @@ if st.button("Enviar E-mail", type="primary"):
                 )
                 
                 st.success(f"E-mail enviado com sucesso para {email_destinatario}!")
+                
             except Exception as e:
                 st.error(f"Erro ao enviar: {e}")
